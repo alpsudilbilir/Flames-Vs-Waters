@@ -9,12 +9,14 @@ import SwiftUI
 
 final class GameBoardViewModel: ObservableObject {
     
+    
+    
     let columns = [GridItem(.flexible()),
                    GridItem(.flexible()),
                    GridItem(.flexible())]
     
     @State private var isPlayerFlame: Bool
-    @State var isGameBoardDisabled: Bool
+    @Published var isGameBoardDisabled: Bool
     
     init(isPlayerFlame: Bool, isGameBoardDisabled: Bool) {
         self.isPlayerFlame = isPlayerFlame
@@ -24,8 +26,8 @@ final class GameBoardViewModel: ObservableObject {
     @Published var alertItem: AlertItem?
     @Published var moves: [Move?] = Array(repeating: nil, count: 9)
     
-    
     func VisualizeGame(for index: Int) {
+        //Player Moves
         if !isCircleEmpty(in: moves, for: index) {  return }
         moves[index] = Move(element: isPlayerFlame ? .flame : .water, boardIndex: index)
         isGameBoardDisabled = true
@@ -37,6 +39,7 @@ final class GameBoardViewModel: ObservableObject {
             alertItem = AlertContext.draw
             return
         }
+        //Computer Moves
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
             let computerPosition = VisualizeComputerMoves(in: moves)
             moves[computerPosition] = Move(element: isPlayerFlame ? .water : .flame, boardIndex: computerPosition)
@@ -51,8 +54,10 @@ final class GameBoardViewModel: ObservableObject {
             }
         }
     }
+    
     func VisualizeComputerMoves(in moves: [Move?]) -> Int {
-        //If computer can win then win
+        
+        //First, computer tries to win.
         let winConditions: Set<Set<Int>> = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]]
         let computerMoves = moves.compactMap { $0 }.filter { isPlayerFlame ? $0.element == .water : $0.element == .flame }
         let computerPositions = Set(computerMoves.map { $0.boardIndex })
@@ -63,7 +68,8 @@ final class GameBoardViewModel: ObservableObject {
                 if isAvailable { return winCondition.first! }
             }
         }
-        //If computer can't win then block
+        
+        //Second, if the first case cannot happen computer blocks player moves.
         let playerMoves = moves.compactMap { $0 }.filter { isPlayerFlame ? $0.element == .flame : $0.element == .water}
         let playerPosition = Set(playerMoves.map { $0.boardIndex })
         for condition in winConditions {
@@ -73,12 +79,12 @@ final class GameBoardViewModel: ObservableObject {
                 if isAvailable { return winCondition.first!}
             }
         }
-        //If computer can't win can't block then take the middle
+        
+        //Third, If first and second cases did not happen, computer takes the middle square.
         let center = 4
         if isCircleEmpty(in: moves, for: center) { return center }
         
-        
-        //If cant do anything make random
+        //Fourth, If none of the cases above did not happen, computer make random move.
         isPlayerFlame.toggle()
         var computerMove = Int.random(in: 0..<9)
         while !isCircleEmpty(in: moves, for: computerMove) {
@@ -87,6 +93,7 @@ final class GameBoardViewModel: ObservableObject {
         isPlayerFlame.toggle()
         return computerMove
     }
+    
     func checkWinConditionForPlayer(for element: Element, in moves: [Move?]) -> Bool {
         let winConditions: Set<Set<Int>> = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]]
         let playerMoves = moves.compactMap { $0 }.filter { isPlayerFlame ? $0.element == .flame : $0.element == .water }
@@ -111,9 +118,12 @@ final class GameBoardViewModel: ObservableObject {
     
     func resetGame() {
         moves = Array(repeating: nil, count: 9)
+        isGameBoardDisabled = false
     }
     
     func checkDrawCondition(in moves: [Move?]) -> Bool {
         return moves.compactMap { $0 }.count == 9
     }
 }
+
+
